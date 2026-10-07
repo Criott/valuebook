@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1017">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Value Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html, body { margin: 0; } img { max-width: 100%; } [hidden] { display: none !important; }
+button.sync { background: none; border: 0; padding: 4px 0; font: 12px var(--f-body); color: var(--muted); cursor: pointer; }
+.setup { display: flex; flex-direction: column; gap: 8px; }
+.setup input { font: 15px var(--f-body); padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.setup button { font: 600 15px var(--f-body); padding: 11px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+a.btn-line { display: block; text-align: center; text-decoration: none; box-sizing: border-box; }
+
+/* Layout: phone-first ledger — summary strip, tabs (Giocate / Statistiche), bottom "+" button, form in a bottom sheet */
+/* Tema scuro fisso (scelta di Cristian) */
+:root {
+  --bg: #0b1017; --surface: #141b25; --ink: #e8ecf2; --muted: #8e9bad; --line: #232d3b;
+  --accent: #6f8dff; --accent-ink: #0b1020;
+  --win: #4cc98c; --win-bg: #12301f; --loss: #ff7a6e; --loss-bg: #3a1a18;
+  --void: #a3acb9; --void-bg: #232b37; --open: #f0ad4a; --open-bg: #3a2a10;
+  --t-mag: #b99cff; --t-mag-bg: #2a2142; --t-365: #3fd0b4; --t-365-bg: #10302b; --t-val: #f5c84c; --t-val-bg: #362c0f;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .55);
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 110px; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.pos { color: var(--win); } .neg { color: var(--loss); }
+
+header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-block: 8px 14px; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: 30px; letter-spacing: .01em; margin: 0; text-transform: uppercase; line-height: 1; }
+h1 span { color: var(--accent); }
+.sync { font-size: 12px; color: var(--muted); }
+
+.summary { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.summary > div { background: var(--surface); padding: 12px 12px 10px; min-width: 0; }
+.summary .lab { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.summary .val { font-family: var(--f-display); font-weight: 700; font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.summary .sub { font-size: 12px; color: var(--muted); }
+
+.period { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.period .quickp { flex: 1; min-width: 0; margin: 0; padding: 0; }
+.period select { font: 600 13px var(--f-body); padding: 7px 10px; border-radius: 999px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); flex-shrink: 0; max-width: 46%; }
+.custom { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 6px 8px; align-items: center; margin: -2px 0 10px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.custom input { font: 15px var(--f-body); padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; width: 100%; }
+details.split { margin-top: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+details.split summary { cursor: pointer; padding: 10px 12px; font-size: 13px; font-weight: 600; color: var(--muted); list-style: none; display: flex; justify-content: space-between; }
+details.split summary::-webkit-details-marker { display: none; }
+details.split summary::after { content: "▾"; transition: transform .15s; }
+details.split[open] summary::after { transform: rotate(180deg); }
+.split-rows { display: flex; flex-direction: column; gap: 1px; background: var(--line); border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; overflow: hidden; }
+.split-row { background: var(--surface); display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 12px; }
+.split-row .n { font-size: 12px; color: var(--muted); }
+.split-row .p { font-family: var(--f-num); font-size: 15px; text-align: right; }
+.split-row .r { font-family: var(--f-num); font-size: 13px; color: var(--muted); text-align: right; min-width: 60px; }
+.t-Maggiorata { background: var(--t-mag-bg); color: var(--t-mag); }
+.t-Bet365 { background: var(--t-365-bg); color: var(--t-365); }
+.t-Value { background: var(--t-val-bg); color: var(--t-val); }
+.seg3 { grid-template-columns: repeat(3, 1fr); }
+.seg button[data-t][aria-pressed="true"] { border-color: transparent; }
+.seg button[data-t="Maggiorata"][aria-pressed="true"] { background: var(--t-mag-bg); color: var(--t-mag); }
+.seg button[data-t="Bet365"][aria-pressed="true"] { background: var(--t-365-bg); color: var(--t-365); }
+.seg button[data-t="Value"][aria-pressed="true"] { background: var(--t-val-bg); color: var(--t-val); }
+.tabs { display: flex; gap: 6px; margin-block: 16px 10px; }
+.tabs button { flex: 1; font: 600 14px var(--f-body); padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+.chip { font: 500 13px var(--f-body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); white-space: nowrap; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.day { font-family: var(--f-display); font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 6px; display: flex; justify-content: space-between; }
+.list { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.bet { background: var(--surface); display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 11px 12px; cursor: pointer; border: 0; text-align: left; color: inherit; font: inherit; width: 100%; }
+.bet:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bet .book { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bet .ev { font-size: 13px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bet .res { font-family: var(--f-num); font-size: 15px; text-align: right; }
+.bet .meta { font-family: var(--f-num); font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+.pill { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: 999px; }
+.p-Vinto { background: var(--win-bg); color: var(--win); }
+.p-Perso { background: var(--loss-bg); color: var(--loss); }
+.p-Void { background: var(--void-bg); color: var(--void); }
+.p-In { background: var(--open-bg); color: var(--open); }
+.quick { grid-column: 1 / -1; display: flex; gap: 6px; margin-top: 4px; }
+.quick button { flex: 1; font: 600 13px var(--f-body); padding: 8px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.quick .qv { color: var(--win); } .quick .qp { color: var(--loss); }
+
+.empty { text-align: center; padding: 40px 16px; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; }
+.empty b { color: var(--ink); display: block; font-size: 16px; margin-bottom: 4px; }
+.notice { padding: 10px 12px; border-radius: 10px; background: var(--open-bg); color: var(--open); font-size: 13px; margin-top: 12px; }
+
+.fab { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 60px; height: 60px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); font-size: 32px; line-height: 1; box-shadow: var(--shadow); cursor: pointer; }
+
+/* statistiche */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.card h2 { font-family: var(--f-display); font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 10px; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+.kv .lab { font-size: 12px; color: var(--muted); }
+.kv .v { font-family: var(--f-num); font-size: 17px; }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font: 11px var(--f-num); }
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+td { padding: 8px 4px; border-bottom: 1px solid var(--line); }
+td.r, th.r { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+.btn-line { width: 100%; font: 600 14px var(--f-body); padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+
+/* sheet */
+.scrim { position: fixed; inset: 0; background: rgba(10, 14, 20, .45); z-index: 10; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 11; background: var(--surface); border-radius: 18px 18px 0 0; box-shadow: var(--shadow); max-height: 92%; overflow-y: auto; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.sheet-in { max-width: 640px; margin: 0 auto; }
+.sheet h2 { font-family: var(--f-display); font-weight: 700; font-size: 22px; text-transform: uppercase; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
+.x { background: none; border: 0; font-size: 26px; color: var(--muted); cursor: pointer; padding: 0 4px; }
+form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.f.full { grid-column: 1 / -1; }
+.f label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.f input, .f select { font: 16px var(--f-body); padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; min-width: 0; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.seg button { font: 600 13px var(--f-body); padding: 10px 0; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.seg button[aria-pressed="true"] { border-color: transparent; }
+.seg button[data-v="Vinto"][aria-pressed="true"] { background: var(--win-bg); color: var(--win); }
+.seg button[data-v="Perso"][aria-pressed="true"] { background: var(--loss-bg); color: var(--loss); }
+.seg button[data-v="Void"][aria-pressed="true"] { background: var(--void-bg); color: var(--void); }
+.seg button[data-v="In corso"][aria-pressed="true"] { background: var(--open-bg); color: var(--open); }
+.preview { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+.primary { flex: 1; font: 600 16px var(--f-body); padding: 14px; border-radius: 12px; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.danger { font: 600 14px var(--f-body); padding: 14px; border-radius: 12px; border: 1px solid var(--loss); background: transparent; color: var(--loss); cursor: pointer; }
+.err { grid-column: 1 / -1; color: var(--loss); font-size: 13px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 20; }
+@media (prefers-reduced-motion: no-preference) { .sheet { animation: up .18s ease-out; } @keyframes up { from { transform: translateY(30px); opacity: .6; } } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Value <span>Book</span></h1>
+    <button class="sync" id="sync" type="button">Collegamento…</button>
+  </header>
+
+  <div class="period">
+    <div class="filters quickp" id="quickp" role="group" aria-label="Periodo veloce"></div>
+    <select id="period" aria-label="Periodo">
+      <option value="week">Questa settimana</option>
+      <option value="month">Questo mese</option>
+      <option value="m3">Ultimi 3 mesi</option>
+      <option value="m6">Ultimi 6 mesi</option>
+      <option value="ytd">Da inizio anno</option>
+      <option value="lastyear">Anno scorso</option>
+      <option value="y2">Ultimi 2 anni</option>
+      <option value="all">Sempre</option>
+      <option value="custom">Scegli date…</option>
+    </select>
+  </div>
+  <div class="custom" id="custom" hidden>
+    <label for="c-from">Dal</label><input type="date" id="c-from">
+    <label for="c-to">Al</label><input type="date" id="c-to">
+  </div>
+  <section class="summary" aria-label="Riepilogo">
+    <div><div class="lab">Profitto</div><div class="val" id="s-profit">—</div><div class="sub" id="s-staked">puntato —</div></div>
+    <div><div class="lab">ROI</div><div class="val" id="s-roi">—</div><div class="sub" id="s-wr">vinte —</div></div>
+    <div><div class="lab">In corso</div><div class="val" id="s-open">—</div><div class="sub" id="s-count">giocate —</div></div>
+  </section>
+  <details class="split" id="split">
+    <summary>Profitto e ROI per tipo</summary>
+    <div class="split-rows" id="split-rows"></div>
+  </details>
+
+  <div class="tabs" role="tablist">
+    <button id="tab-list" role="tab" aria-selected="true">Giocate</button>
+    <button id="tab-stats" role="tab" aria-selected="false">Statistiche</button>
+  </div>
+
+  <section id="view-list">
+    <div class="filters" id="tfilters" role="group" aria-label="Filtra per tipo"></div>
+    <div class="filters" id="filters" role="group" aria-label="Filtra per esito"></div>
+    <div id="bets"></div>
+  </section>
+
+  <section id="view-stats" hidden></section>
+
+  <div class="notice" id="notice" hidden></div>
+</div>
+
+<button class="fab" id="fab" aria-label="Nuova giocata">+</button>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+  <div class="sheet-in">
+    <h2><span id="sheet-title">Nuova giocata</span><button class="x" id="close" aria-label="Chiudi">×</button></h2>
+    <form id="form" novalidate>
+      <div class="f"><label for="f-data">Data</label><input id="f-data" type="date" required></div>
+      <div class="f"><label for="f-book">Book</label><input id="f-book" list="books" autocomplete="off" placeholder="es. Bet365"></div>
+      <div class="f full"><label>Tipo</label>
+        <div class="seg seg3" id="f-tipo">
+          <button type="button" data-t="Maggiorata">Maggiorata</button>
+          <button type="button" data-t="Bet365">Bet365</button>
+          <button type="button" data-t="Value">Value</button>
+        </div>
+      </div>
+      <div class="f full"><label for="f-evento">Evento</label><input id="f-evento" autocomplete="off" placeholder="es. Inter – Milan, Over 2,5"></div>
+      <div class="f"><label for="f-stake">Puntata €</label><input id="f-stake" inputmode="decimal" autocomplete="off" placeholder="100"></div>
+      <div class="f"><label for="f-quota">Quota</label><input id="f-quota" inputmode="decimal" autocomplete="off" placeholder="2,05"></div>
+      <div class="f full"><label>Esito</label>
+        <div class="seg" id="f-esito">
+          <button type="button" data-v="In corso">In corso</button>
+          <button type="button" data-v="Vinto">Vinto</button>
+          <button type="button" data-v="Perso">Perso</button>
+          <button type="button" data-v="Void">Void</button>
+        </div>
+      </div>
+      <div class="f full"><label for="f-note">Note</label><input id="f-note" autocomplete="off" placeholder="facoltative"></div>
+      <div class="preview num" id="preview"></div>
+      <div class="err" id="err" hidden></div>
+      <div class="actions">
+        <button type="button" class="danger" id="del" hidden>Elimina</button>
+        <button type="submit" class="primary" id="save">Salva</button>
+      </div>
+    </form>
+  </div>
+</div>
+<datalist id="books"></datalist>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const COMMON_BOOKS = ["Bet365","Sisal","Snai","Eurobet","Goldbet","Lottomatica","Planetwin365","William Hill","Betfair","Betsoon","Stake","Eplay24","Vincitu","Netwin","Marathonbet","MyLotteries","Fastbet","Winamax","Betflag","Bwin","Codere","Domusbet","Giochi24","Sportium","Starcasinò"];
+  const $ = id => document.getElementById(id);
+  const eur = n => (n < 0 ? "−" : n > 0 ? "+" : "") + "€" + Math.abs(n).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const eur0 = n => "€" + n.toLocaleString("it-IT", { maximumFractionDigits: 0 });
+  const pct = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n * 100).toLocaleString("it-IT", { maximumFractionDigits: 1 }) + "%";
+  const parseNum = s => { const v = parseFloat(String(s).trim().replace(/\s/g, "").replace(",", ".")); return isFinite(v) ? v : NaN; };
+  const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const MONTHS = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+  const fmtDay = iso => { const [y, m, d] = iso.split("-").map(Number); const wd = new Date(y, m - 1, d).toLocaleDateString("it-IT", { weekday: "short" }); return wd + " " + d + " " + MONTHS[m - 1] + (y !== new Date().getFullYear() ? " " + y : ""); };
+  const profit = b => b.esito === "Vinto" ? b.stake * (b.quota - 1) : b.esito === "Perso" ? -b.stake : b.esito === "Void" ? 0 : null;
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const TIPI = ["Maggiorata", "Bet365", "Value"];
+  const TIPO_PLUR = { Maggiorata: "Maggiorate", Bet365: "Bet365", Value: "Value" };
+  const isB365 = s => /bet\s*365/i.test(s || "");
+  const QUICK = [["week", "Settimana"], ["month", "Mese"], ["m3", "3 mesi"], ["ytd", "Anno"]];
+  let period = "month";
+  let custom = ["", ""];
+  try { period = localStorage.getItem("vb-period") || "month"; custom = JSON.parse(localStorage.getItem("vb-custom") || '["",""]'); } catch {}
+  const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  function periodRange(p) {
+    const n = new Date(), y = n.getFullYear(), m = n.getMonth();
+    if (p === "week") { const d = new Date(y, m, n.getDate() - ((n.getDay() + 6) % 7)); return [iso(d), null]; }
+    if (p === "month") return [iso(new Date(y, m, 1)), null];
+    if (p === "m3") return [iso(new Date(y, m - 3, n.getDate() + 1)), null];
+    if (p === "m6") return [iso(new Date(y, m - 6, n.getDate() + 1)), null];
+    if (p === "ytd") return [y + "-01-01", null];
+    if (p === "lastyear") return [(y - 1) + "-01-01", (y - 1) + "-12-31"];
+    if (p === "y2") return [(y - 1) + "-01-01", null];
+    if (p === "custom") return [custom[0] || null, custom[1] || null];
+    return [null, null];
+  }
+  const inPeriod = () => { const [a, b] = periodRange(period); return bets.filter(x => (!a || x.data >= a) && (!b || x.data <= b)); };
+  let api = null, sheetUrl = "", bets = [], filter = "Tutte", tfilter = "Tutti", editing = null, esito = "In corso", tipo = "Maggiorata", tab = "list";
+
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2200); }
+
+  function stats(list) {
+    const closed = list.filter(b => b.esito === "Vinto" || b.esito === "Perso");
+    const staked = closed.reduce((s, b) => s + b.stake, 0);
+    const p = list.reduce((s, b) => s + (profit(b) ?? 0), 0);
+    const won = list.filter(b => b.esito === "Vinto").length;
+    const lost = list.filter(b => b.esito === "Perso").length;
+    const settled = list.filter(b => profit(b) !== null);
+    return { p, staked, roi: staked ? p / staked : 0, won, lost, wr: won + lost ? won / (won + lost) : 0,
+      open: list.filter(b => b.esito === "In corso"), count: list.length,
+      avgQ: settled.length ? settled.reduce((s, b) => s + b.quota, 0) / settled.length : 0,
+      avgStake: list.length ? list.reduce((s, b) => s + b.stake, 0) / list.length : 0 };
+  }
+
+  function renderSummary() {
+    const pb = inPeriod(), s = stats(pb);
+    const pe = $("s-profit"); pe.textContent = pb.length ? eur(s.p) : "€0,00"; pe.className = "val " + (s.p > 0 ? "pos" : s.p < 0 ? "neg" : "");
+    $("s-staked").textContent = "puntato " + eur0(s.staked);
+    const re = $("s-roi"); re.textContent = s.staked ? pct(s.roi) : "—"; re.className = "val " + (s.roi > 0 ? "pos" : s.roi < 0 ? "neg" : "");
+    $("s-wr").textContent = "vinte " + Math.round(s.wr * 100) + "%";
+    $("s-open").textContent = bets.filter(b => b.esito === "In corso").length;
+    $("s-count").textContent = s.count + " giocate nel periodo";
+    $("split-rows").innerHTML = TIPI.map(t => {
+      const ts = stats(pb.filter(b => b.tipo === t));
+      return `<div class="split-row"><div><span class="pill t-${t}">${TIPO_PLUR[t]}</span> <span class="n">${ts.count} giocate</span></div>
+        <div class="p ${ts.p > 0 ? "pos" : ts.p < 0 ? "neg" : ""}">${eur(ts.p)}</div>
+        <div class="r">ROI ${ts.staked ? pct(ts.roi) : "—"}</div></div>`;
+    }).join("");
+  }
+
+  function renderFilters() {
+    $("quickp").innerHTML = QUICK.map(([k, l]) => `<button class="chip" data-p="${k}" aria-pressed="${k === period}">${l}</button>`).join("");
+    $("period").value = period;
+    $("custom").hidden = period !== "custom";
+    $("c-from").value = custom[0]; $("c-to").value = custom[1];
+    $("tfilters").innerHTML = ["Tutti", ...TIPI].map(o => `<button class="chip" data-tf="${o}" aria-pressed="${o === tfilter}">${o === "Tutti" ? "Tutti i tipi" : TIPO_PLUR[o]}</button>`).join("");
+    const opts = ["Tutte", "In corso", "Vinto", "Perso", "Void"];
+    $("filters").innerHTML = opts.map(o => `<button class="chip" data-f="${o}" aria-pressed="${o === filter}">${o === "Vinto" ? "Vinte" : o === "Perso" ? "Perse" : o}</button>`).join("");
+  }
+
+  function renderList() {
+    const el = $("bets");
+    if (!bets.length) {
+      el.innerHTML = `<div class="empty"><b>Nessuna giocata ancora</b>Tocca il + in basso per registrare la prima: data, book, puntata, quota ed esito.</div>`;
+      return;
+    }
+    const list = (filter === "In corso" ? bets : inPeriod()).filter(b => (filter === "Tutte" || b.esito === filter) && (tfilter === "Tutti" || b.tipo === tfilter));
+    if (!list.length) { el.innerHTML = `<div class="empty"><b>Nessuna giocata in questo periodo</b>Cambia periodo in alto (per esempio "Sempre") o togli i filtri.</div>`; return; }
+    const groups = new Map();
+    list.forEach(b => { if (!groups.has(b.data)) groups.set(b.data, []); groups.get(b.data).push(b); });
+    let html = "";
+    for (const [day, items] of groups) {
+      const dp = items.reduce((s, b) => s + (profit(b) ?? 0), 0);
+      html += `<div class="day"><span>${fmtDay(day)}</span><span class="num ${dp > 0 ? "pos" : dp < 0 ? "neg" : ""}">${eur(dp)}</span></div><div class="list">`;
+      for (const b of items) {
+        const p = profit(b);
+        const pillCls = b.esito === "In corso" ? "p-In" : "p-" + b.esito;
+        html += `<div class="bet" role="button" tabindex="0" data-id="${b.id}">
+          <div class="book">${esc(b.book || "Book non indicato")}</div>
+          <div class="res ${p > 0 ? "pos" : p < 0 ? "neg" : ""}">${p === null ? `<span class="pill p-In">In corso</span>` : eur(p)}</div>
+          <div class="ev"><span class="pill t-${b.tipo}">${TIPO_PLUR[b.tipo]}</span> ${b.evento ? esc(b.evento) : (p === null ? "" : '<span class="pill ' + pillCls + '">' + b.esito + '</span>')}</div>
+          <div class="meta">€${b.stake.toLocaleString("it-IT")} @ ${b.quota.toLocaleString("it-IT", { minimumFractionDigits: 2 })}</div>
+          ${b.esito === "In corso" ? `<div class="quick"><button class="qv" data-q="Vinto" data-id="${b.id}">Vinta</button><button class="qp" data-q="Perso" data-id="${b.id}">Persa</button><button data-q="Void" data-id="${b.id}">Void</button></div>` : ""}
+        </div>`;
+      }
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  function chartSVG(list) {
+    const settled = list.filter(b => profit(b) !== null).slice().sort((a, b) => a.data.localeCompare(b.data) || (a.creato || 0) - (b.creato || 0));
+    if (settled.length < 2) return `<p class="sync">Il grafico compare dopo almeno 2 giocate chiuse.</p>`;
+    let cum = 0; const pts = [0, ...settled.map(b => (cum += profit(b)))];
+    const W = 600, H = 220, L = 52, R = 12, T = 12, B = 24;
+    const min = Math.min(0, ...pts), max = Math.max(0, ...pts), span = max - min || 1;
+    const x = i => L + (i / (pts.length - 1)) * (W - L - R);
+    const y = v => T + (1 - (v - min) / span) * (H - T - B);
+    const step = Math.pow(10, Math.floor(Math.log10(span))) * (span / Math.pow(10, Math.floor(Math.log10(span))) > 5 ? 2 : span / Math.pow(10, Math.floor(Math.log10(span))) > 2 ? 1 : .5);
+    let grid = "";
+    for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) {
+      grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="${Math.abs(v) < 1e-9 ? 1.5 : 1}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}</text>`;
+    }
+    const line = pts.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1)).join(" ");
+    const area = line + ` L${x(pts.length - 1).toFixed(1)} ${y(0).toFixed(1)} L${x(0).toFixed(1)} ${y(0).toFixed(1)} Z`;
+    const last = pts[pts.length - 1], col = last >= 0 ? "var(--win)" : "var(--loss)";
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Profitto cumulato: ${eur(last)} dopo ${settled.length} giocate chiuse">
+      ${grid}
+      <path d="${area}" fill="${col}" opacity=".12"/>
+      <path d="${line}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/>
+      <circle cx="${x(pts.length - 1)}" cy="${y(last)}" r="4.5" fill="${col}"/>
+      <text x="${L}" y="${H - 6}">inizio</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${settled.length} giocate</text>
+    </svg>`;
+  }
+
+  function groupTable(keyFn, label, sortByKey) {
+    const m = new Map();
+    inPeriod().forEach(b => { const k = keyFn(b); if (!m.has(k)) m.set(k, []); m.get(k).push(b); });
+    let rows = [...m.entries()].map(([k, l]) => ({ k, ...stats(l) }));
+    rows.sort(sortByKey ? (a, b) => b.k.localeCompare(a.k) : (a, b) => b.p - a.p);
+    return `<div class="tbl-wrap"><table><thead><tr><th>${label}</th><th class="r">N.</th><th class="r">Profitto</th><th class="r">ROI</th></tr></thead><tbody>${
+      rows.map(r => `<tr><td>${esc(sortByKey ? monthLabel(r.k) : r.k)}</td><td class="r">${r.count}</td><td class="r ${r.p > 0 ? "pos" : r.p < 0 ? "neg" : ""}">${eur(r.p)}</td><td class="r">${r.staked ? pct(r.roi) : "—"}</td></tr>`).join("")
+    }</tbody></table></div>`;
+  }
+  const monthLabel = k => { const [y, m] = k.split("-"); return MONTHS[+m - 1] + " " + y; };
+
+  function renderStats() {
+    const el = $("view-stats");
+    const pb = inPeriod();
+    if (!pb.length) { el.innerHTML = `<div class="empty"><b>Nessuna giocata in questo periodo</b>Scegli un periodo più lungo in alto.</div>`; return; }
+    const s = stats(pb);
+    el.innerHTML = `
+      <div class="card"><h2>Profitto nel tempo</h2>${chartSVG(pb)}</div>
+      <div class="card"><h2>Numeri</h2><div class="kv">
+        <div><div class="lab">Profitto</div><div class="v ${s.p > 0 ? "pos" : s.p < 0 ? "neg" : ""}">${eur(s.p)}</div></div>
+        <div><div class="lab">ROI / Yield</div><div class="v">${s.staked ? pct(s.roi) : "—"}</div></div>
+        <div><div class="lab">Totale puntato (chiuse)</div><div class="v">${eur0(s.staked)}</div></div>
+        <div><div class="lab">Puntata media</div><div class="v">€${s.avgStake.toLocaleString("it-IT", { maximumFractionDigits: 0 })}</div></div>
+        <div><div class="lab">Vinte / Perse</div><div class="v">${s.won} / ${s.lost}</div></div>
+        <div><div class="lab">% di vincita</div><div class="v">${Math.round(s.wr * 100)}%</div></div>
+        <div><div class="lab">Quota media</div><div class="v">${s.avgQ.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+        <div><div class="lab">In corso</div><div class="v">${s.open.length} · €${s.open.reduce((a, b) => a + b.stake, 0).toLocaleString("it-IT")}</div></div>
+      </div></div>
+      <div class="card"><h2>Per tipo</h2>${groupTable(b => TIPO_PLUR[b.tipo], "Tipo")}</div>
+      <div class="card"><h2>Per book</h2>${groupTable(b => b.book || "Non indicato", "Book")}</div>
+      <div class="card"><h2>Per mese</h2>${groupTable(b => b.data.slice(0, 7), "Mese", true)}</div>
+      ${sheetUrl ? `<a class="btn-line" href="${esc(sheetUrl)}" target="_blank" rel="noopener">Apri il Foglio Google</a>` : ""}`;
+  }
+
+  function renderAll() {
+    const books = [...new Set([...bets.map(b => b.book).filter(Boolean), ...COMMON_BOOKS])].sort((a, b) => a.localeCompare(b));
+    $("books").innerHTML = books.map(b => `<option value="${esc(b)}"></option>`).join("");
+    renderSummary(); renderFilters(); renderList(); if (tab === "stats") renderStats();
+  }
+
+  function setTab(t) {
+    tab = t;
+    $("tab-list").setAttribute("aria-selected", t === "list"); $("tab-stats").setAttribute("aria-selected", t === "stats");
+    $("view-list").hidden = t !== "list"; $("view-stats").hidden = t !== "stats";
+    if (t === "stats") renderStats();
+  }
+
+  // ---- sheet ----
+  function setTipo(v) { tipo = v; document.querySelectorAll("#f-tipo button").forEach(b => b.setAttribute("aria-pressed", b.dataset.t === v)); }
+  function setEsito(v) { esito = v; document.querySelectorAll("#f-esito button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === v)); updatePreview(); }
+  function updatePreview() {
+    const st = parseNum($("f-stake").value), q = parseNum($("f-quota").value);
+    $("preview").textContent = st > 0 && q > 1 ? `Se vinta: ${eur(st * (q - 1))}  ·  Se persa: ${eur(-st)}` : "";
+  }
+  function openSheet(b) {
+    editing = b || null;
+    $("sheet-title").textContent = b ? "Modifica giocata" : "Nuova giocata";
+    $("f-data").value = b ? b.data : today();
+    $("f-book").value = b ? b.book : "";
+    $("f-evento").value = b ? b.evento : "";
+    $("f-stake").value = b ? String(b.stake).replace(".", ",") : "";
+    $("f-quota").value = b ? String(b.quota).replace(".", ",") : "";
+    $("f-note").value = b ? (b.note || "") : "";
+    setEsito(b ? b.esito : "In corso");
+    setTipo(b ? b.tipo : "Maggiorata");
+    $("del").hidden = !b; $("del").textContent = "Elimina"; $("del").dataset.armed = "";
+    $("err").hidden = true;
+    $("scrim").hidden = false; $("sheet").hidden = false;
+    setTimeout(() => (b ? $("f-esito").querySelector('[aria-pressed="true"]') : $("f-book")).focus(), 50);
+  }
+  function closeSheet() { $("scrim").hidden = true; $("sheet").hidden = true; editing = null; }
+
+  async function save(e) {
+    e.preventDefault();
+    const stake = parseNum($("f-stake").value), quota = parseNum($("f-quota").value), data = $("f-data").value;
+    const err = $("err");
+    if (!data) { err.textContent = "Inserisci la data."; err.hidden = false; return; }
+    if (!(stake > 0)) { err.textContent = "La puntata deve essere un numero maggiore di 0 (es. 50 o 50,5)."; err.hidden = false; return; }
+    if (!(quota > 1)) { err.textContent = "La quota deve essere maggiore di 1 (es. 2,05)."; err.hidden = false; return; }
+    if (!api) { err.textContent = "App non collegata al foglio: incolla prima il codice di collegamento."; err.hidden = false; return; }
+    const body = { data, book: $("f-book").value.trim(), evento: $("f-evento").value.trim(), stake, quota, esito, tipo, note: $("f-note").value.trim(),
+      creato: editing ? (editing.creato || Date.now()) : Date.now() };
+    $("save").disabled = true;
+    try {
+      const g = { id: editing ? editing.id : newId(), ...body };
+      const was = editing;
+      closeSheet();
+      bets = [g, ...bets.filter(b => b.id !== g.id)]; setBets(bets);
+      toast(was ? "Giocata aggiornata" : "Giocata salvata");
+      await post({ azione: "salva", giocata: g });
+    } catch (x) {
+      toast("Non salvata sul foglio: controlla la connessione"); load();
+    } finally { $("save").disabled = false; }
+  }
+
+  async function quickEsito(id, v) {
+    if (!api) return;
+    const b = bets.find(x => x.id === id); if (!b) return;
+    setBets(bets.map(x => x.id === id ? { ...x, esito: v } : x));
+    try { await post({ azione: "esito", id, esito: v }); toast(v === "Vinto" ? "Segnata vinta " + eur(profit({ ...b, esito: v })) : v === "Perso" ? "Segnata persa" : "Segnata void"); }
+    catch { toast("Non salvato sul foglio, riprova"); load(); }
+  }
+
+  // ---- events ----
+  $("tab-list").onclick = () => setTab("list");
+  $("tab-stats").onclick = () => setTab("stats");
+  $("fab").onclick = () => openSheet();
+  $("close").onclick = closeSheet; $("scrim").onclick = closeSheet;
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheet").hidden) closeSheet(); });
+  $("form").addEventListener("submit", save);
+  $("f-stake").addEventListener("input", updatePreview); $("f-quota").addEventListener("input", updatePreview);
+  $("f-esito").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setEsito(b.dataset.v); });
+  $("f-tipo").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    setTipo(b.dataset.t);
+    if (b.dataset.t === "Bet365") $("f-book").value = "Bet365";
+    else if (isB365($("f-book").value)) $("f-book").value = "";
+  });
+  $("f-book").addEventListener("change", () => { if (isB365($("f-book").value)) setTipo("Bet365"); else if (tipo === "Bet365") setTipo("Maggiorata"); });
+  function setPeriod(p) { period = p; try { localStorage.setItem("vb-period", p); } catch {} renderAll(); }
+  $("quickp").addEventListener("click", e => { const b = e.target.closest("[data-p]"); if (b) setPeriod(b.dataset.p); });
+  $("period").addEventListener("change", e => {
+    if (e.target.value === "custom" && !custom[0] && !custom[1]) { const n = new Date(); custom = [iso(new Date(n.getFullYear(), n.getMonth(), 1)), today()]; try { localStorage.setItem("vb-custom", JSON.stringify(custom)); } catch {} }
+    setPeriod(e.target.value);
+  });
+  const setCustom = () => { custom = [$("c-from").value, $("c-to").value]; try { localStorage.setItem("vb-custom", JSON.stringify(custom)); } catch {} renderAll(); };
+  $("c-from").addEventListener("change", setCustom); $("c-to").addEventListener("change", setCustom);
+  $("tfilters").addEventListener("click", e => { const b = e.target.closest("[data-tf]"); if (b) { tfilter = b.dataset.tf; renderFilters(); renderList(); } });
+  $("filters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b) { filter = b.dataset.f; renderFilters(); renderList(); } });
+  $("bets").addEventListener("click", e => {
+    const q = e.target.closest("[data-q]"); if (q) { e.stopPropagation(); quickEsito(q.dataset.id, q.dataset.q); return; }
+    const row = e.target.closest(".bet"); if (row) openSheet(bets.find(b => b.id === row.dataset.id));
+  });
+  $("bets").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("bet")) { e.preventDefault(); openSheet(bets.find(b => b.id === e.target.dataset.id)); } });
+  $("del").onclick = async () => {
+    const d = $("del");
+    if (!d.dataset.armed) { d.dataset.armed = "1"; d.textContent = "Tocca di nuovo per eliminare"; return; }
+    if (!api || !editing) return;
+    const id = editing.id; closeSheet(); setBets(bets.filter(b => b.id !== id)); toast("Giocata eliminata");
+    try { await post({ azione: "elimina", id }); } catch { toast("Non eliminata dal foglio, riprova"); load(); }
+  };
+
+  renderAll();
+
+  // ---- data: Foglio Google ----
+  const newId = () => "a-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const norm = b => ({ ...b, stake: +b.stake || 0, quota: +b.quota || 0, esito: b.esito || "In corso", tipo: TIPI.includes(b.tipo) ? b.tipo : (isB365(b.book) ? "Bet365" : "Maggiorata") });
+  function setBets(list) {
+    bets = list.map(norm).sort((a, b) => b.data.localeCompare(a.data) || (b.creato || 0) - (a.creato || 0));
+    renderAll();
+  }
+  function apply(j) {
+    if (j.foglio) sheetUrl = j.foglio;
+    setBets(j.giocate || []);
+    try { localStorage.setItem("vb-cache", JSON.stringify({ giocate: j.giocate, foglio: sheetUrl })); } catch {}
+  }
+  const hhmm = () => new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  let loading = false;
+  async function load() {
+    if (!api || loading) return;
+    loading = true; $("sync").textContent = "Aggiorno…";
+    try {
+      const r = await fetch(api.u + "?k=" + encodeURIComponent(api.k), { cache: "no-store" });
+      const j = await r.json();
+      if (j.errore) throw new Error(j.errore);
+      apply(j); $("sync").textContent = "Aggiornato " + hhmm();
+      $("notice").hidden = true;
+    } catch (x) {
+      $("sync").textContent = "Offline · tocca per riprovare";
+    } finally { loading = false; }
+  }
+  async function post(payload) {
+    $("sync").textContent = "Salvo sul foglio…";
+    const r = await fetch(api.u, { method: "POST", body: JSON.stringify({ k: api.k, ...payload }) });
+    const j = await r.json();
+    if (j.errore) throw new Error(j.errore);
+    apply(j); $("sync").textContent = "Salvato " + hhmm();
+  }
+  function readCode(code) {
+    try { const c = JSON.parse(atob(decodeURIComponent(code.trim().replace(/^.*#c=/, "")))); if (c.u && c.k) return c; } catch {}
+    return null;
+  }
+  function showSetup() {
+    const n = $("notice"); n.hidden = false;
+    n.innerHTML = `<div class="setup"><b>Collega l'app al tuo Foglio Google</b>
+      <span>Apri il link di collegamento che ti ho dato, oppure incolla qui il codice.</span>
+      <input id="setup-code" autocomplete="off" placeholder="codice di collegamento">
+      <button type="button" id="setup-go">Collega</button></div>`;
+    $("setup-go").onclick = () => {
+      const c = readCode($("setup-code").value);
+      if (!c) { toast("Codice non valido"); return; }
+      api = c; try { localStorage.setItem("vb-api", JSON.stringify(api)); } catch {}
+      n.hidden = true; load();
+    };
+  }
+
+  try { api = JSON.parse(localStorage.getItem("vb-api") || "null"); } catch {}
+  if (location.hash.startsWith("#c=")) {
+    const c = readCode(location.hash);
+    if (c) { api = c; try { localStorage.setItem("vb-api", JSON.stringify(api)); } catch {} }
+    history.replaceState(null, "", location.pathname);
+  }
+  try { const c = JSON.parse(localStorage.getItem("vb-cache") || "null"); if (c) { sheetUrl = c.foglio || ""; setBets(c.giocate || []); } } catch {}
+  $("sync").onclick = load;
+  if (!api) { $("sync").textContent = "Non collegato"; showSetup(); }
+  else load();
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
+  setInterval(() => { if (document.visibilityState === "visible" && $("sheet").hidden) load(); }, 60000);
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+
+</body>
+</html>
