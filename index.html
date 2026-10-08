@@ -132,6 +132,12 @@ form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .f.full { grid-column: 1 / -1; }
 .f label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .f input, .f select { font: 16px var(--f-body); padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; min-width: 0; }
+.f.ac { position: relative; }
+.sugg { position: absolute; top: 100%; left: 0; right: 0; z-index: 5; margin-top: 4px; max-height: 232px; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+.sugg button { display: block; width: 100%; text-align: left; font: 15px var(--f-body); padding: 11px 12px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); cursor: pointer; }
+.sugg button:last-child { border-bottom: 0; }
+.sugg button.on, .sugg button:hover { background: var(--bg); }
+.sugg b { color: var(--accent); font-weight: 600; }
 .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .seg button { font: 600 13px var(--f-body); padding: 10px 0; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
 .seg button[aria-pressed="true"] { border-color: transparent; }
@@ -208,7 +214,7 @@ form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     <h2><span id="sheet-title">Nuova giocata</span><button class="x" id="close" aria-label="Chiudi">×</button></h2>
     <form id="form" novalidate>
       <div class="f"><label for="f-data">Data</label><input id="f-data" type="date" required></div>
-      <div class="f"><label for="f-book">Book</label><input id="f-book" list="books" autocomplete="off" placeholder="es. Bet365"></div>
+      <div class="f ac"><label for="f-book">Book</label><input id="f-book" autocomplete="off" autocapitalize="words" placeholder="es. Bet365" role="combobox" aria-autocomplete="list" aria-controls="book-sugg" aria-expanded="false"><div class="sugg" id="book-sugg" role="listbox" hidden></div></div>
       <div class="f full"><label>Tipo</label>
         <div class="seg seg3" id="f-tipo">
           <button type="button" data-t="Maggiorata">Maggiorata</button>
@@ -237,12 +243,13 @@ form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     </form>
   </div>
 </div>
-<datalist id="books"></datalist>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 (() => {
-  const COMMON_BOOKS = ["Bet365","Sisal","Snai","Eurobet","Goldbet","Lottomatica","Planetwin365","William Hill","Betfair","Betsoon","Stake","Eplay24","Vincitu","Netwin","Marathonbet","MyLotteries","Fastbet","Winamax","Betflag","Bwin","Codere","Domusbet","Giochi24","Sportium","Starcasinò"];
+  // Book con concessione ADM in Italia (più quelli già usati, aggiunti in automatico)
+  const COMMON_BOOKS = ["888sport","AdmiralBet","Bet365","Betaland","Betfair","Betflag","Betic","Betsoon","Betway","Better","Bwin","Codere","Cplay","DAZN Bet","Domusbet","Eplay24","Eurobet","Fastbet","Gioco Digitale","Giochi24","Goldbet","LeoVegas","Lottomatica","Marathonbet","MyLotteries","NetBet","Netwin","Novibet","Planetwin365","PokerStars","Quigioco","Signorbet","Sisal","Snai","Sportbet","Sportitaliabet","Sportium","Stake","StarCasinò","StarVegas","Totosì","Unibet","Vincitu","William Hill","Winamax","Zonagioco"];
+  let bookList = [];
   const $ = id => document.getElementById(id);
   const eur = n => (n < 0 ? "−" : n > 0 ? "+" : "") + "€" + Math.abs(n).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const eur0 = n => "€" + n.toLocaleString("it-IT", { maximumFractionDigits: 0 });
@@ -409,7 +416,7 @@ form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
   function renderAll() {
     const books = [...new Set([...bets.map(b => b.book).filter(Boolean), ...COMMON_BOOKS])].sort((a, b) => a.localeCompare(b));
-    $("books").innerHTML = books.map(b => `<option value="${esc(b)}"></option>`).join("");
+    bookList = books;
     renderSummary(); renderFilters(); renderList(); if (tab === "stats") renderStats();
   }
 
@@ -443,7 +450,45 @@ form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     $("scrim").hidden = false; $("sheet").hidden = false;
     setTimeout(() => (b ? $("f-esito").querySelector('[aria-pressed="true"]') : $("f-book")).focus(), 50);
   }
-  function closeSheet() { $("scrim").hidden = true; $("sheet").hidden = true; editing = null; }
+  // ---- suggerimenti book ----
+  const fold = t => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  let suggIdx = -1;
+  function hideSugg() { $("book-sugg").hidden = true; $("f-book").setAttribute("aria-expanded", "false"); suggIdx = -1; }
+  function showSugg() {
+    const q = fold($("f-book").value), box = $("book-sugg");
+    if (!q) { hideSugg(); return; }
+    const starts = bookList.filter(b => fold(b).startsWith(q)), has = bookList.filter(b => !fold(b).startsWith(q) && fold(b).includes(q));
+    const list = [...starts, ...has].slice(0, 8);
+    if (!list.length || (list.length === 1 && fold(list[0]) === q && list[0] === $("f-book").value)) { hideSugg(); return; }
+    suggIdx = -1;
+    box.innerHTML = list.map(b => {
+      const n = b.length, i = q.length && b.toLowerCase().startsWith($("f-book").value.trim().toLowerCase()) ? $("f-book").value.trim().length : 0;
+      return `<button type="button" role="option" data-b="${esc(b)}">${i ? `<b>${esc(b.slice(0, i))}</b>${esc(b.slice(i, n))}` : esc(b)}</button>`;
+    }).join("");
+    box.hidden = false; $("f-book").setAttribute("aria-expanded", "true");
+  }
+  function pickBook(b) {
+    $("f-book").value = b; hideSugg();
+    $("f-book").dispatchEvent(new Event("change"));
+    $("f-evento").focus();
+  }
+  $("f-book").addEventListener("input", showSugg);
+  $("f-book").addEventListener("focus", showSugg);
+  $("f-book").addEventListener("blur", () => setTimeout(hideSugg, 150));
+  $("f-book").addEventListener("keydown", e => {
+    const items = [...$("book-sugg").querySelectorAll("button")];
+    if ($("book-sugg").hidden || !items.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      suggIdx = (suggIdx + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items.forEach((x, i) => x.classList.toggle("on", i === suggIdx));
+    } else if (e.key === "Enter") { e.preventDefault(); pickBook(items[Math.max(suggIdx, 0)].dataset.b); }
+    else if (e.key === "Escape") { e.stopPropagation(); hideSugg(); }
+  });
+  $("book-sugg").addEventListener("pointerdown", e => e.preventDefault());
+  $("book-sugg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) pickBook(b.dataset.b); });
+
+  function closeSheet() { hideSugg(); $("scrim").hidden = true; $("sheet").hidden = true; editing = null; }
 
   async function save(e) {
     e.preventDefault();
